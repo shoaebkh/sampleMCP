@@ -6,3 +6,9 @@ target/
 .classpath
 .project
 .claude/settings.local.json
+
+# Salesforce JWT Bearer credentials — the private key must never be committed.
+# The .crt is not secret, but is gitignored here too to keep the whole
+# certs/ folder simple to reason about; copy it out when you upload it
+# to the Salesforce Connected App.
+salesforce/certs/

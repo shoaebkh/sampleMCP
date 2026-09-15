@@ -14,6 +14,10 @@ import io.modelcontextprotocol.spec.McpSchema.CallToolRequest;
 import io.modelcontextprotocol.spec.McpSchema.CallToolResult;
 import io.modelcontextprotocol.spec.McpSchema.Tool;
 
+import org.shoaeb.mcp.salesforce.SalesforceMcpTools;
+import org.shoaeb.mcp.salesforce.SalesforceProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,6 +34,8 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 public class McpServerConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(McpServerConfig.class);
 
     /**
      * The MCP transport provider, implemented as a plain {@link jakarta.servlet.http.HttpServlet}.
@@ -63,13 +69,27 @@ public class McpServerConfig {
      * is closed gracefully on application shutdown.
      */
     @Bean(destroyMethod = "close")
-    public McpSyncServer mcpSyncServer(HttpServletStreamableServerTransportProvider transportProvider) {
-        return McpServer.sync(transportProvider)
+    public McpSyncServer mcpSyncServer(HttpServletStreamableServerTransportProvider transportProvider,
+            SalesforceProperties salesforceProperties, SalesforceMcpTools salesforceMcpTools) {
+
+        var serverBuilder = McpServer.sync(transportProvider)
                 .serverInfo("sample-mcp-server", "1.0.0")
                 .toolCall(echoTool(), this::handleEcho)
                 .toolCall(currentTimeTool(), this::handleCurrentTime)
-                .toolCall(addNumbersTool(), this::handleAddNumbers)
-                .build();
+                .toolCall(addNumbersTool(), this::handleAddNumbers);
+
+        if (salesforceProperties.isConfigured()) {
+            serverBuilder = serverBuilder
+                    .toolCall(salesforceMcpTools.getAccountTool(), salesforceMcpTools::handleGetAccount)
+                    .toolCall(salesforceMcpTools.createCaseTool(), salesforceMcpTools::handleCreateCase);
+            log.info("Salesforce credentials configured; registered salesforce_get_account and salesforce_create_case tools.");
+        }
+        else {
+            log.info("Salesforce credentials not configured (SF_CLIENT_ID / SF_USERNAME / SF_PRIVATE_KEY_PEM); "
+                    + "skipping salesforce_get_account and salesforce_create_case tool registration.");
+        }
+
+        return serverBuilder.build();
     }
 
     // ---------------------------------------------------------------------

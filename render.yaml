@@ -1,0 +1,13 @@
+# Render "Blueprint" spec: lets you create this service in one step via
+# https://dashboard.render.com/blueprints instead of clicking through the
+# New Web Service wizard by hand. See README.md for the manual steps too.
+services:
+  - type: web
+    name: sample-mcp-server
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    envVars:
+      - key: PORT
+        value: 8080
